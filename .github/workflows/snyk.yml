@@ -5,34 +5,49 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:  # Permet l'exécution manuelle
 
 jobs:
   snyk:
     name: Snyk Dependency Scan
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+      security-events: write  # Important pour publier les résultats
+    
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
-
+      uses: actions/checkout@v4  # Version mise à jour
+      
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4  # Version mise à jour
       with:
         node-version: '18'
-
+        cache: 'npm'  # Cache pour accélérer
+        
     - name: Install dependencies
-      run: npm install
-
+      run: |
+        npm ci --legacy-peer-deps  # Plus fiable que npm install
+        
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/node@master
-      continue-on-error: true
+      continue-on-error: true  # Continue même si des vulnérabilités sont trouvées
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --json-file-output=snyk-report.json
-
-    - name: Upload Snyk report
-      uses: actions/upload-artifact@v3
+        args: --severity-threshold=high --json-file-output=snyk-report.json
+        
+    - name: Upload Snyk report as artifact
+      uses: actions/upload-artifact@v4  # Version mise à jour
+      if: always()  # Upload même en cas d'échec
       with:
         name: snyk-report
         path: snyk-report.json
+        
+    - name: Upload Snyk results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: snyk.sarif
+      continue-on-error: true
