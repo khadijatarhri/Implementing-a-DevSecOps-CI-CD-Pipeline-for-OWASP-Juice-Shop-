@@ -23,12 +23,13 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'  # ✅ v20 pour Angular 19
+        cache: 'npm'
         
     - name: Install dependencies
       run: |
         echo "Installing dependencies..."
-        npm install --legacy-peer-deps
+        npm ci --legacy-peer-deps || npm install --legacy-peer-deps
         echo "Dependencies installed successfully"
         
     - name: Run Snyk security scan
@@ -37,14 +38,14 @@ jobs:
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --severity-threshold=medium
+        command: test
+        args: --severity-threshold=medium --json-file-output=snyk-report.json
         
-    - name: Upload Snyk report (if exists)
-      uses: actions/upload-artifact@v4
+    - name: Upload Snyk report
+      uses: actions/upload-artifact@v4  # ✅ v4 au lieu de v3
       if: always()
       with:
-        name: snyk-report
-        path: |
-          snyk-report.json
-          snyk.sarif
+        name: snyk-report-${{ github.run_id }}
+        path: snyk-report.json
+        retention-days: 30
       continue-on-error: true
