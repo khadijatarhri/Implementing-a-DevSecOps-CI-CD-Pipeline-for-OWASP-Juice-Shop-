@@ -17,29 +17,34 @@ jobs:
       security-events: write
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # ❌ RETIRÉ : cache: 'npm'  ← C'est ce qui causait l'erreur
         
     - name: Install dependencies
-      run: npm install --legacy-peer-deps  # ✅ npm install au lieu de npm ci
+      run: |
+        echo "Installing dependencies..."
+        npm install --legacy-peer-deps
+        echo "Dependencies installed successfully"
         
-    - name: Run Snyk to check for vulnerabilities
+    - name: Run Snyk security scan
       uses: snyk/actions/node@master
       continue-on-error: true
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --severity-threshold=medium --json-file-output=snyk-report.json
+        args: --severity-threshold=medium
         
-    - name: Upload Snyk report
+    - name: Upload Snyk report (if exists)
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: snyk-report
-        path: snyk-report.json
+        path: |
+          snyk-report.json
+          snyk.sarif
+      continue-on-error: true
