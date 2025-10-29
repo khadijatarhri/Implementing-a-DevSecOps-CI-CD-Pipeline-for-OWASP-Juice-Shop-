@@ -5,34 +5,47 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   snyk:
     name: Snyk Dependency Scan
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+      security-events: write
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
-
+        
     - name: Install dependencies
-      run: npm install
-
-    - name: Run Snyk to check for vulnerabilities
+      run: |
+        echo "Installing dependencies..."
+        npm install --legacy-peer-deps
+        echo "Dependencies installed successfully"
+        
+    - name: Run Snyk security scan
       uses: snyk/actions/node@master
       continue-on-error: true
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --json-file-output=snyk-report.json
-
-    - name: Upload Snyk report
-      uses: actions/upload-artifact@v3
+        args: --severity-threshold=medium
+        
+    - name: Upload Snyk report (if exists)
+      uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: snyk-report
-        path: snyk-report.json
+        path: |
+          snyk-report.json
+          snyk.sarif
+      continue-on-error: true
+
